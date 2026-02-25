@@ -16,10 +16,10 @@ const modules = [
   },
   {
     title: "Tasks",
-    description: "Manage your to-do's, projects, and deadlines. Stay on top of everything.",
+    description: "Beheer je taken, projecten en deadlines met slimme natural language input.",
     href: "/tasks",
     gradient: "bg-gradient-to-br from-blue-500 to-cyan-500",
-    isActive: false,
+    isActive: true,
     icon: (
       <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />

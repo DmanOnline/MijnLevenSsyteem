@@ -132,6 +132,78 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Also include tasks as calendar events
+  const tasksDayStart = new Date(rangeStart);
+  const tasksDayEnd = new Date(rangeEnd);
+
+  const tasksInRange = await prisma.task.findMany({
+    where: {
+      userId: session.userId,
+      status: { not: "done" },
+      scheduledDate: { gte: tasksDayStart, lte: tasksDayEnd },
+    },
+    include: { project: true },
+  });
+
+  for (const task of tasksInRange) {
+    if (!task.scheduledDate) continue;
+
+    let startDate: Date;
+    let endDate: Date;
+    let isAllDay = false;
+
+    if (task.scheduledTime) {
+      // Task with specific time → timed event
+      startDate = new Date(
+        `${task.scheduledDate.toISOString().substring(0, 10)}T${task.scheduledTime}:00`
+      );
+      endDate = new Date(
+        startDate.getTime() + (task.estimatedDuration || 60) * 60 * 1000
+      );
+    } else {
+      // Task without time → all-day event
+      startDate = new Date(task.scheduledDate);
+      endDate = new Date(task.scheduledDate);
+      isAllDay = true;
+    }
+
+    allEvents.push({
+      id: `task_${task.id}`,
+      userId: task.userId,
+      title: `✓ ${task.title}`,
+      description: task.description,
+      location: null,
+      startDate,
+      endDate,
+      isAllDay,
+      recurrenceRule: null,
+      recurrenceEnd: null,
+      parentEventId: null,
+      originalDate: null,
+      icalUid: null,
+      isLocallyModified: false,
+      isLocallyDeleted: false,
+      subCalendarId: "tasks",
+      subCalendar: {
+        id: "tasks",
+        name: "Taken",
+        color: task.project?.color || "#3b82f6",
+        isVisible: true,
+        userId: task.userId,
+        sortOrder: 999,
+        icalUrl: null,
+        lastSyncedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      _isVirtual: false,
+      _isTask: true,
+      _taskId: task.id,
+      _taskStatus: task.status,
+      _taskPriority: task.priority,
+    });
+  }
+
   return NextResponse.json({ events: allEvents });
 }
 
