@@ -172,7 +172,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: SidebarPr
           </div>
           {showLabels && (
             <span className="text-sm font-semibold tracking-tight text-foreground/90">
-              MyLifeSystem
+              Waypoint
             </span>
           )}
         </div>
