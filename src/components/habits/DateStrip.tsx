@@ -62,6 +62,7 @@ export default function DateStrip({
           const completed = completionsByDate?.get(dateStr) || 0;
           const total = totalByDate?.get(dateStr) || 0;
           const allDone = total > 0 && completed >= total;
+          const isPast = !isFuture && !isToday;
 
           return (
             <button
@@ -94,9 +95,7 @@ export default function DateStrip({
                 {total > 0 && (
                   <div
                     className={`w-1.5 h-1.5 rounded-full ${
-                      isSelected
-                        ? allDone ? "bg-white" : "bg-white/40"
-                        : allDone ? "bg-emerald-500" : completed > 0 ? "bg-amber-400" : "bg-border"
+                      allDone ? "bg-emerald-400" : completed > 0 ? "bg-amber-400" : isPast ? "bg-red-400" : isSelected ? "bg-white/40" : "bg-border"
                     }`}
                   />
                 )}

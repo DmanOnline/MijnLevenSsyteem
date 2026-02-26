@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { getWeekDays, getWeekNumber, DAY_NAMES_SHORT, isToday, formatDateNL } from "@/lib/calendar";
+import { useEffect, useRef, useState } from "react";
+import { getWeekDays, getWeekNumber, DAY_NAMES_SHORT, isToday } from "@/lib/calendar";
 import { CalendarEvent } from "@/lib/types/calendar";
 import TimeSlot from "./TimeSlot";
 
@@ -36,6 +36,14 @@ export default function WeekView({
   const hasScrolled = useRef(false);
   const days = getWeekDays(currentDate);
 
+  // Current time - updates every minute
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Auto-scroll to current hour on mount
   useEffect(() => {
     if (scrollRef.current && !hasScrolled.current) {
@@ -53,7 +61,6 @@ export default function WeekView({
       const start = new Date(event.startDate);
       const end = new Date(event.endDate);
 
-      // Check same day
       if (
         start.getFullYear() !== date.getFullYear() ||
         start.getMonth() !== date.getMonth() ||
@@ -62,7 +69,6 @@ export default function WeekView({
         return false;
       }
 
-      // Check if event starts in this hour
       return Math.floor(start.getHours() + start.getMinutes() / 60) === hour ||
         (start.getHours() < hour && end.getHours() >= hour);
     });
@@ -82,6 +88,15 @@ export default function WeekView({
     });
   }
 
+  // Check if a day is in the past (before today)
+  function isDayPast(date: Date): boolean {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    return d < today;
+  }
+
   return (
     <div className="rounded-2xl border border-border bg-card/60 overflow-hidden animate-fade-in flex flex-col" style={{ height: "calc(100vh - 220px)" }}>
       {/* Day headers */}
@@ -93,10 +108,11 @@ export default function WeekView({
         </div>
         {days.map((date, i) => {
           const today = isToday(date);
+          const past = isDayPast(date);
           return (
             <div
               key={i}
-              className={`p-2 text-center border-l border-border ${today ? "bg-accent/5" : ""}`}
+              className={`p-2 text-center border-l border-border ${today ? "bg-accent/5" : ""} ${past ? "opacity-50" : ""}`}
             >
               <div className="text-xs font-medium text-muted-foreground uppercase">
                 {DAY_NAMES_SHORT[i]}
@@ -123,10 +139,11 @@ export default function WeekView({
           </div>
           {days.map((date, i) => {
             const allDayEvents = getAllDayEvents(date);
+            const past = isDayPast(date);
             return (
-              <div key={i} className="p-1 border-l border-border min-h-[32px]">
+              <div key={i} className={`p-1 border-l border-border min-h-[32px] ${past ? "opacity-40" : ""}`}>
                 {allDayEvents.map((event) => (
-                  <EventChipImport
+                  <AllDayChip
                     key={event._virtualId || event.id}
                     event={event}
                     color={getEventColor(event)}
@@ -167,6 +184,7 @@ export default function WeekView({
                   onDragLeave={onDragLeave}
                   onDrop={onDrop}
                   slotHeight={slotHeight}
+                  now={now}
                 />
               ))}
             </div>
@@ -178,7 +196,7 @@ export default function WeekView({
 }
 
 // Simple inline EventChip for all-day events row
-function EventChipImport({
+function AllDayChip({
   event,
   color,
   onClick,

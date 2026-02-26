@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarEvent } from "@/lib/types/calendar";
+import { isToday } from "@/lib/calendar";
 import EventChip from "./EventChip";
 
 interface TimeSlotProps {
@@ -15,6 +16,7 @@ interface TimeSlotProps {
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, date: Date, hour: number) => void;
   slotHeight?: number;
+  now: Date;
 }
 
 export default function TimeSlot({
@@ -29,16 +31,42 @@ export default function TimeSlot({
   onDragLeave,
   onDrop,
   slotHeight = 40,
+  now,
 }: TimeSlotProps) {
+  const today = isToday(date);
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+
+  // Is this entire slot in the past?
+  const slotIsPast = isSlotPast(date, hour, now);
+
+  // Show the red time indicator in this slot?
+  const showTimeIndicator = today && hour === currentHour;
+  const indicatorOffset = (currentMinute / 60) * slotHeight;
+
   return (
     <div
       onClick={() => onClickSlot(date, hour)}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, date, hour)}
-      className="border-b border-r border-border relative cursor-pointer hover:bg-overlay/50 transition-colors group"
+      className={`border-b border-r border-border relative cursor-pointer hover:bg-overlay/50 transition-colors group ${
+        slotIsPast ? "bg-muted-foreground/[0.03]" : ""
+      }`}
       style={{ height: `${slotHeight}px` }}
     >
+      {/* Current time red indicator line */}
+      {showTimeIndicator && (
+        <div
+          className="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
+          style={{ top: `${indicatorOffset}px` }}
+        >
+          <div className="w-3 h-3 rounded-full bg-red-500 -ml-[6px] shrink-0 shadow-sm" />
+          <div className="flex-1 h-[2px] bg-red-500 shadow-sm" />
+        </div>
+      )}
+
+      {/* Events */}
       {events.map((event) => {
         const start = new Date(event.startDate);
         const end = new Date(event.endDate);
@@ -50,6 +78,7 @@ export default function TimeSlot({
 
         const topOffset = (startHour - hour) * slotHeight;
         const height = Math.max((endHour - startHour) * slotHeight - 2, 16);
+        const isPast = end < now;
 
         return (
           <div
@@ -67,10 +96,17 @@ export default function TimeSlot({
               variant="block"
               onClick={() => onClickEvent(event)}
               onDragStart={(e) => onDragStart(e, event)}
+              isPast={isPast}
             />
           </div>
         );
       })}
     </div>
   );
+}
+
+function isSlotPast(date: Date, hour: number, now: Date): boolean {
+  const slotEnd = new Date(date);
+  slotEnd.setHours(hour + 1, 0, 0, 0);
+  return slotEnd < now;
 }

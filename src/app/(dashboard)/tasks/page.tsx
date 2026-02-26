@@ -526,21 +526,41 @@ function TaskCardInline({
   onClick: (task: Task) => void;
 }) {
   const isDone = task.status === "done";
+  const [completing, setCompleting] = useState(false);
   const priorityBorder: Record<string, string> = {
     high: "border-red-500",
     medium: "border-muted-foreground/40",
     low: "border-blue-400",
   };
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isDone) {
+      onToggle(task);
+      return;
+    }
+    setCompleting(true);
+    setTimeout(() => {
+      onToggle(task);
+      setCompleting(false);
+    }, 800);
+  };
+
   return (
     <div
-      className={`flex items-center gap-3 px-2 py-2.5 border-b border-border/50 hover:bg-surface-hover/50 transition-colors cursor-pointer ${isDone ? "opacity-50" : ""}`}
+      className={`flex items-center gap-3 px-2 py-2.5 border-b border-border/50 hover:bg-surface-hover/50 transition-colors cursor-pointer ${
+        isDone ? "opacity-50" : ""
+      } ${completing ? "animate-task-complete" : ""}`}
       onClick={() => onClick(task)}
     >
       <button
-        onClick={(e) => { e.stopPropagation(); onToggle(task); }}
-        className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all ${
-          isDone ? "border-accent bg-accent" : priorityBorder[task.priority] || priorityBorder.medium
+        onClick={handleToggle}
+        className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+          isDone
+            ? "border-accent bg-accent"
+            : completing
+            ? "border-green-500 bg-green-500 animate-checkbox-pop animate-success-ring"
+            : priorityBorder[task.priority] || priorityBorder.medium
         }`}
       >
         {isDone && (
@@ -548,14 +568,27 @@ function TaskCardInline({
             <polyline points="20 6 9 17 4 12" />
           </svg>
         )}
+        {completing && (
+          <span className="animate-checkmark-draw">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </span>
+        )}
       </button>
-      <span className={`text-sm flex-1 truncate ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
+      <span className={`text-sm flex-1 truncate ${
+        isDone
+          ? "line-through text-muted-foreground"
+          : completing
+          ? "text-muted-foreground task-title-strike"
+          : "text-foreground"
+      }`}>
         {task.title}
       </span>
-      {task.estimatedDuration && task.scheduledTime && (
+      {task.estimatedDuration && task.scheduledTime && !completing && (
         <span className="text-[10px] text-muted-foreground/60">{task.estimatedDuration}min</span>
       )}
-      {task.project && (
+      {task.project && !completing && (
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: task.project.color }} />
           {task.project.name}

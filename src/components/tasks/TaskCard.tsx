@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef } from "react";
 import { Task } from "@/lib/types/tasks";
 import { formatScheduledDate, formatDueDate, formatRecurrence } from "@/lib/tasks";
 
@@ -19,6 +20,8 @@ export default function TaskCard({
   onDragStart,
 }: TaskCardProps) {
   const isDone = task.status === "done";
+  const [completing, setCompleting] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scheduledLabel = formatScheduledDate(task.scheduledDate, task.scheduledTime);
   const dueInfo = formatDueDate(task.dueDate);
   const recurrenceLabel = formatRecurrence(task.recurrenceRule, task.recurrenceDay);
@@ -31,24 +34,42 @@ export default function TaskCard({
 
   const checkboxStyle = priorityBorder[task.priority] || priorityBorder.medium;
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (isDone) {
+      // Uncomplete: just toggle immediately
+      onToggle(task);
+      return;
+    }
+
+    // Complete: play animation first, then toggle
+    setCompleting(true);
+    timeoutRef.current = setTimeout(() => {
+      onToggle(task);
+      setCompleting(false);
+    }, 800);
+  };
+
   return (
     <div
       className={`group flex items-start gap-3 px-2 py-2.5 border-b border-border/50 hover:bg-surface-hover/50 transition-colors cursor-pointer ${
         isDone ? "opacity-50" : ""
-      } ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
+      } ${completing ? "animate-task-complete" : ""} ${
+        draggable ? "cursor-grab active:cursor-grabbing" : ""
+      }`}
       onClick={() => onClick(task)}
       draggable={draggable}
       onDragStart={(e) => onDragStart?.(e, task)}
     >
       {/* Checkbox */}
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle(task);
-        }}
-        className={`shrink-0 mt-0.5 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all ${
+        onClick={handleToggle}
+        className={`shrink-0 mt-0.5 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
           isDone
             ? "border-accent bg-accent"
+            : completing
+            ? "border-green-500 bg-green-500 animate-checkbox-pop animate-success-ring"
             : checkboxStyle
         }`}
       >
@@ -57,25 +78,36 @@ export default function TaskCard({
             <polyline points="20 6 9 17 4 12" />
           </svg>
         )}
+        {completing && (
+          <span className="animate-checkmark-draw">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </span>
+        )}
       </button>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
         <span
           className={`text-sm leading-snug ${
-            isDone ? "line-through text-muted-foreground" : "text-foreground"
+            isDone
+              ? "line-through text-muted-foreground"
+              : completing
+              ? "text-muted-foreground task-title-strike"
+              : "text-foreground"
           }`}
         >
           {task.title}
         </span>
-        {task.description && !isDone && (
+        {task.description && !isDone && !completing && (
           <p className="text-xs text-muted-foreground/70 mt-0.5 truncate">
             {task.description}
           </p>
         )}
 
         {/* Meta tags */}
-        {!isDone && (scheduledLabel || dueInfo.label || recurrenceLabel) && (
+        {!isDone && !completing && (scheduledLabel || dueInfo.label || recurrenceLabel) && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
             {scheduledLabel && (
               <span className="inline-flex items-center gap-1 text-xs text-accent">

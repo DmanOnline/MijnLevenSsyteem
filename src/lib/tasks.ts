@@ -47,6 +47,11 @@ function pad(n: number): string {
   return n.toString().padStart(2, "0");
 }
 
+/** Extract YYYY-MM-DD from a date string (handles both "YYYY-MM-DD" and full ISO "YYYY-MM-DDTHH:mm:ss.sssZ") */
+function toDateOnly(dateStr: string): string {
+  return dateStr.substring(0, 10);
+}
+
 function formatDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
@@ -272,7 +277,7 @@ export function getSmartDefaultDate(): string {
  */
 export function getDateLabel(dateStr: string): string {
   if (!dateStr) return "";
-  const d = new Date(dateStr + "T00:00:00");
+  const d = new Date(toDateOnly(dateStr) + "T00:00:00");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
@@ -297,7 +302,7 @@ export function formatScheduledDate(
   time: string | null
 ): string {
   if (!date) return "";
-  const d = new Date(date + "T00:00:00");
+  const d = new Date(toDateOnly(date) + "T00:00:00");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
@@ -347,7 +352,7 @@ export function formatDueDate(date: string | null): {
   isOverdue: boolean;
 } {
   if (!date) return { label: "", isOverdue: false };
-  const d = new Date(date + "T00:00:00");
+  const d = new Date(toDateOnly(date) + "T00:00:00");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 

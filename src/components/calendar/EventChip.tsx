@@ -9,6 +9,7 @@ interface EventChipProps {
   variant?: "compact" | "block";
   onClick?: (e: React.MouseEvent) => void;
   onDragStart?: (e: React.DragEvent) => void;
+  isPast?: boolean;
 }
 
 export default function EventChip({
@@ -17,6 +18,7 @@ export default function EventChip({
   variant = "compact",
   onClick,
   onDragStart,
+  isPast = false,
 }: EventChipProps) {
   const textColor = getContrastColor(color);
   const startTime = !event.isAllDay
@@ -35,7 +37,9 @@ export default function EventChip({
           e.stopPropagation();
           onClick?.(e);
         }}
-        className="rounded-md px-2 py-1 text-xs cursor-pointer hover:opacity-90 transition-opacity overflow-hidden h-full"
+        className={`rounded-md px-2 py-1 text-xs cursor-pointer hover:opacity-90 transition-opacity overflow-hidden h-full ${
+          isPast ? "opacity-40 saturate-50" : ""
+        }`}
         style={{ backgroundColor: color, color: textColor }}
         title={event.title}
       >
@@ -55,7 +59,9 @@ export default function EventChip({
         e.stopPropagation();
         onClick?.(e);
       }}
-      className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs cursor-pointer hover:opacity-80 transition-opacity truncate"
+      className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs cursor-pointer hover:opacity-80 transition-opacity truncate ${
+        isPast ? "opacity-40 saturate-50" : ""
+      }`}
       style={{
         backgroundColor: `${color}20`,
         color: color,
