@@ -33,15 +33,15 @@ Every module is a data source. The richer the data, the smarter the system.
 
 | Module | Status | Description |
 |--------|--------|-------------|
-| Tasks | Live | Projects, deadlines, commitments |
+| Tasks | Live | Projects, deadlines, scheduling, conflict detection |
 | Habits | Live | Daily routines with streaks and heatmaps |
 | Goals | Live | Long-term goals with milestones |
-| Notes | Live | Personal knowledge base |
-| Calendar | Live | Events and time management |
-| Journal + Mood | Building | Daily reflections with mood tracking |
-| Finance | Building | YNAB-style budgeting and expense tracking |
-| People | Building | Relationship CRM — remember everything about everyone |
-| Apple Health | Building | Sleep, steps, workouts — automatic sync |
+| Notes | Live | Personal knowledge base with autosave |
+| Calendar | Live | Events, recurrence, iCal sync |
+| Journal | Live | Daily reflections with mood, energy, gratitude, @mentions |
+| People | Live | Relationship CRM — interactions, follow-ups, life events, birthday tracking |
+| Finance | Planned | YNAB-style budgeting and expense tracking |
+| Apple Health | Planned | Sleep, steps, workouts — automatic sync |
 
 ### Layer 2 — Unified Data API
 One service that assembles context from all modules — a personal Microsoft Graph. The intelligence layer reads and writes through this single interface.
@@ -123,8 +123,20 @@ Copy `.env.example` to `.env` and configure your database and API keys.
 
 ---
 
+## Cross-module integrations
+
+Modules don't live in isolation — they talk to each other:
+
+- **Birthdays** from People appear as calendar events with age calculation
+- **Follow-ups** with due dates show up in both calendar and tasks
+- **Journal @mentions** link entries to people, visible on their profile
+- **Relationship health** scores based on contact frequency vs. last interaction
+- **Smart date input** across all modules — type `15` or `15-3` and the date auto-completes
+
+---
+
 ## Status
 
-Active development. Layer 1 (data modules) is nearly complete. Layer 2 (unified API) and Layer 3 (intelligence) are next.
+Active development. Layer 1 (data modules) is complete. Layer 2 (unified API) and Layer 3 (intelligence) are next.
 
 This is a personal project built in public. Follow along.
