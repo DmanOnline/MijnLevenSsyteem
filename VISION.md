@@ -1,6 +1,6 @@
 # Waypoint — Visie & Architectuur
 
-> Sessie: 26 februari 2026
+> Laatste update: 28 februari 2026
 
 ---
 
@@ -22,8 +22,8 @@ Het verschil met bestaande tools:
 Laag 3 — Intelligentie
          Proactief, conversationeel, schrijft terug naar data
 
-Laag 2 — Unified Data API
-         Één service, alles leesbaar én schrijfbaar voor de AI
+Laag 2 — Geen aparte laag
+         getUserContext() en tool handlers zijn onderdeel van Laag 3
 
 Laag 1 — Data (alle bronnen)
          Alles wat data produceert over jouw leven
@@ -31,21 +31,21 @@ Laag 1 — Data (alle bronnen)
 
 ---
 
-## Laag 1 — Data (compleet)
+## Laag 1 — Data
 
-### Manuele modules (jij voert in, AI leest én schrijft)
+### Status
 
-| Module | Status | Omschrijving |
-|--------|--------|--------------|
-| Tasks | ✓ gebouwd | AI kan taken aanmaken vanuit gesprek |
-| Habits | ✓ gebouwd | AI ziet streaks, gemiste dagen, patronen |
-| Goals | ✓ gebouwd | AI ziet voortgang en stilstand |
-| Notes | ✓ gebouwd | AI kan notities toevoegen |
-| Calendar | ✓ gebouwd | AI ziet drukke periodes |
-| Journal + Mood | ✗ bouwen | Dagelijkse reflecties, mood geïntegreerd. AI kan entries aanmaken vanuit gesprek |
-| Finance | ✗ bouwen | YNAB-stijl: rekeningen, transacties, budgetten, budget vs. werkelijk, spaardoelen |
-| People | ✗ bouwen | Relatie-CRM: alles over iemand dumpen, interacties loggen, dingen terughalen |
-| Apple Health | ✗ bouwen | Slaap, stappen, hartslag, workouts — dashboard + AI leesbaar |
+| Module | Status |
+|--------|--------|
+| Tasks | ✓ gebouwd |
+| Habits | ✓ gebouwd |
+| Goals | ✓ gebouwd |
+| Notes | ✓ gebouwd |
+| Calendar | ✓ gebouwd |
+| Journal + Mood | ✓ gebouwd |
+| Finance (YNAB-stijl) | ✓ gebouwd |
+| People (relatie-CRM) | ✓ gebouwd |
+| Apple Health | ✗ nog te bouwen |
 
 ### Externe/automatische bronnen (later)
 - Bankdata (koppeling aan Finance module)
@@ -55,123 +55,94 @@ Laag 1 — Data (alle bronnen)
 
 ---
 
-## Laag 2 — Unified Data API
-
-Één service die alle data samenvoegt tot context die de intelligentie kan lezen. Jouw eigen "Microsoft Graph".
-
-```typescript
-getUserContext(userId) → {
-  tasks:    openstaand, uitgesteld, recent afgerond
-  habits:   streaks, gemiste dagen, patronen
-  goals:    actief, stilstaand, voortgang
-  calendar: komende events, drukke periodes
-  journal:  recente entries, sentiment
-  notes:    recent, gelinkt aan andere data
-  health:   slaap, stappen, energie
-  finance:  budget status, afwijkingen
-  people:   recente interacties, openstaande follow-ups
-}
-```
-
----
-
 ## Laag 3 — Intelligentie
 
-### Hoe het werkt (technisch)
+### Model & interface
 
-**Gestructureerde data** (habits, tasks, goals) → nooit samenvatten, altijd vers berekenen vanuit database. Geen betrouwbaarheidsverlies.
+- **Model:** Claude Sonnet 4.6
+- **Interface:** In-app chat (geen externe kanalen)
+- **Proactief:** Cron job 2x/dag (ochtend + avond). De AI beslist zelf of er iets de moeite waard is om te zeggen — en zwijgt wanneer er niets is. Dat maakt het betekenisvol als het wél iets zegt.
 
-**Ongestructureerde data** (journal, notes) → embeddings opslaan naast originele tekst. Semantisch zoeken bij relevante context. Origineel blijft altijd bewaard.
+### Geheugen — drie lagen
 
-**Gebruikersprofiel** → klein, door jou gereviewed. Systeem stelt voor, jij bevestigt. Wordt meegestuurd bij elke AI-call.
+**1. Gebruikersprofiel** — door jou geschreven, zelden veranderd
+> "Ik ben Dion, 28. Ik wil over 5 jaar X zijn. Mijn waarden zijn Y."
+Wordt gecached via Anthropic prompt caching.
 
-**LLM-aanroepen** → database is het geheugen, niet het model. Elke call krijgt: profiel + berekende patronen + recente ruwe data.
+**2. AI-geheugen** — door de AI zelf bijgehouden, groeit organisch
+Na gesprekken schrijft de AI observaties terug naar de database:
+> "Dion worstelt met gymmen op maandagen. Voelt zich goed na contact met mensen. Heeft de neiging meer te beloven dan hij aankan."
+Dit is wat het systeem *leert* over jou over tijd.
 
-### Wat de intelligentie doet
+**3. Actuele signalen** — vers berekend per call, compact
+Niet alle ruwe data, maar: `overdue taken: 3, mood trend: dalend, 2 mensen verwaarloost`.
+Database rekent, AI interpreteert.
 
-**Patronen herkennen** (code, geen AI nodig):
-- Taak X is 3+ keer verschoven → signaal
-- Ratio reactive vs intentioneel werk
-- Habit gemist + drukke kalenderdag → correlatie
-- Journal sentiment over tijd
+**Elke AI-call krijgt:** profiel (gecached) + AI-geheugen + actuele signalen + recente gesprekshistorie.
 
-**Interpreteren** (Claude API):
-- Ruwe patronen omzetten naar menselijke inzichten
-- Context: wie is Dion, wat zijn zijn waarden, wat speelt er
+### Tools — wat de AI kan doen
 
-**Proactief initiatief**:
-```
-Systeem:  "Die offerte staat al 5 dagen open. Verstuurd?"
-Jij:      "Nee nog niet"
-Systeem:  "Wat houdt je tegen?"
-Jij:      "Voel me er niet goed bij"
-Systeem:  [maakt journal entry aan + signaal op taak]
-          "Wil je er nu over nadenken of later?"
-```
+De AI heeft schrijftoegang tot modules via tool use. MVP-scope: Tasks en Calendar. Later uitbreiden naar alle modules.
 
-### De AI schrijft ook terug
+**MVP:**
+| Tool | Actie |
+|------|-------|
+| `list_tasks` | taken ophalen |
+| `create_task` | taak aanmaken |
+| `update_task` | taak bijwerken |
+| `complete_task` | taak afronden |
+| `delete_task` | taak verwijderen |
+| `list_events` | kalendergebeurtenissen ophalen |
+| `create_event` | event aanmaken |
+| `update_event` | event bijwerken |
+| `delete_event` | event verwijderen |
+| `save_memory` | observatie opslaan in AI-geheugen |
 
-De AI is niet alleen lezer maar ook schrijver:
-- Gesprek → automatisch journal entry
-- Gesprek → taak aanmaken
-- Gesprek → notitie toevoegen aan persoon in People
-- Gesprek → follow-up task bij People entry
+**Later:**
+Habits loggen, journal aanmaken, notitie toevoegen, persoon interactie loggen, follow-up aanmaken, transactie toevoegen.
 
----
+### Technische principes
 
-## De interface
+- **Gestructureerde data** (habits, tasks, goals) → nooit samenvatten, altijd vers berekenen vanuit database
+- **Ongestructureerde data** (journal, notes) → later: embeddings voor semantisch zoeken
+- **Database is het geheugen**, niet het model
 
-**Niet:** modules die je configureert
-**Wel:** een gesprek dat data aanmaakt en beheert
+### Proactief — hoe het voelt
 
-De modules blijven bestaan als handmatige interfaces (taken toevoegen, calendar zien, journallen). Maar de AI-laag werkt conversationeel — jij praat, het systeem handelt.
+Niet een notificatiesysteem dat op elk event reageert. De AI kijkt 2x per dag naar alles, en spreekt alleen op als het iets heeft dat de moeite waard is:
 
-Voorbeelden:
-```
-"Ik moet die offerte nog sturen"        → taak aangemaakt
-"Ik voel me al een week moe"            → signaal + journal
-"Had goed gesprek met Lisa, wil samen-  → notitie bij Lisa
- werken"                                   + follow-up task
-```
-
----
-
-## Kernprincipes
-
-**1. Karakter, niet productiviteit**
-Het systeem vraagt niet "wat deed je vandaag?" maar "wie werd je vandaag?"
-
-**2. De kloof is de informatie**
-Je zegt discipline te waarderen maar 0 uur ging ernaar. Die kloof is het kompas, niet een aanval.
-
-**3. Waarden als wortel**
-Alles traceert terug naar waarden. Als iets niet verbindt aan een waarde, is het administratie of hoort het niet in je leven.
-
-**4. Geduldig systeem**
-Waarden hoef je niet op dag 1 te weten. Het systeem ontdekt ze door terug te kijken op je gedrag. Na genoeg data suggereert het: *"dit lijkt belangrijk voor jou."*
-
-**5. Betrouwbaarheid boven slimheid**
-Gestructureerde data nooit samenvatten — altijd vers berekenen. Ongestructureerde data embedden, niet samenvatten. Profiel klein en door gebruiker gereviewed houden.
+> "Je bent de afgelopen twee weken veel bezig met mensen — Lisa, je moeder, die nieuwe collega. Maar je doelen staan stil. Is dat een bewuste keuze of ben je het uit het oog verloren?"
 
 ---
 
 ## Bouwvolgorde
 
 ```
-Stap 1   Journal + Mood module bouwen
-Stap 2   Finance module bouwen (YNAB-stijl)
-Stap 3   People module bouwen (relatie-CRM)
-Stap 4   Apple Health integratie
-         → Laag 1 compleet
+✓ Stap 1   Journal + Mood
+✓ Stap 2   Finance (YNAB-stijl)
+✓ Stap 3   People (relatie-CRM)
+  Stap 4   Apple Health
+           → Laag 1 compleet
 
-Stap 5   Unified Data API bouwen
-         → Laag 2 compleet
+  Stap 5   AI — fundament
+             - Prisma: AiMessage, AiMemory, UserProfile tabellen
+             - getUserContext() (compacte signalen)
+             - Tool definitions + handlers (Tasks + Calendar)
+             - System prompt builder (profiel + geheugen + signalen)
 
-Stap 6   Claude API integratie (basis chat met je data)
-Stap 7   Proactieve checks (systeem initieert)
-Stap 8   Embeddings (semantisch zoeken in journal/notes)
-Stap 9   Externe bronnen (bankdata, weer, etc.)
-         → Laag 3 compleet
+  Stap 6   AI — chat interface
+             - Chat API route (streaming + tool use)
+             - Chat UI in de app
+             - Profiel pagina (simpele textarea)
+
+  Stap 7   AI — proactief
+             - Cron endpoint 2x/dag
+             - Proactieve berichten in chat UI
+
+  Stap 8   AI — uitbreiden
+             - Meer tools (habits, journal, people, finance)
+             - Embeddings voor journal/notes
+             - Meer patronen in getUserContext()
 ```
 
 ---
